@@ -1,4 +1,4 @@
-package com.rpgjr.hophop.application;
+package com.rpgjr.hophop.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

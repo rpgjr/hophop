@@ -1,4 +1,4 @@
-package com.rpgjr.hophop.application;
+package com.rpgjr.hophop.enums;
 
 public enum Setup {
 	Onsite, Hybrid, WFH

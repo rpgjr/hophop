@@ -1,5 +1,6 @@
-package com.rpgjr.hophop.application;
+package com.rpgjr.hophop.utils;
 
+import com.rpgjr.hophop.enums.EmploymentType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

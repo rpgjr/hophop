@@ -1,6 +1,8 @@
-package com.rpgjr.hophop.application;
+package com.rpgjr.hophop.model.entity;
 
-import com.rpgjr.hophop.status.Status;
+import com.rpgjr.hophop.enums.Currency;
+import com.rpgjr.hophop.enums.EmploymentType;
+import com.rpgjr.hophop.enums.Setup;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,9 +20,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "applications")
 @Getter
 @NoArgsConstructor
+@Table(name = "applications")
 public class Application {
 
 	@Id
@@ -33,8 +35,11 @@ public class Application {
 	private Status status;
 
 	private String title;
+
 	private String company;
+
 	private BigDecimal salaryMin;
+
 	private BigDecimal salaryMax;
 
 	@Enumerated(EnumType.STRING)
@@ -44,7 +49,10 @@ public class Application {
 
 	@Enumerated(EnumType.STRING)
 	private Setup setup;
+
 	private String remarks;
+
 	private String link;
+
 	private LocalDate appliedDate;
 }

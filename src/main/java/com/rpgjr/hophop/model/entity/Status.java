@@ -1,4 +1,4 @@
-package com.rpgjr.hophop.status;
+package com.rpgjr.hophop.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,9 +9,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "statuses")
 @Getter
 @NoArgsConstructor
+@Table(name = "statuses")
 public class Status {
 
 	@Id
