@@ -25,4 +25,19 @@ public class Constants {
 
     public static String DELETE_FAILURE = "Delete Failure";
 
+    public static String SCRAPER_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36";
+
+    public static String SCRAPER_DOCUMENT_ERROR = "Could not open the job page";
+
+    public static String SCRAPER_URL_NOT_VALID = "Enter a public http(s) job link";
+
+    public static String HTTPS_NAME = "https";
+
+    public static String HTTP_NAME = "http";
+
+    public static String WWW_DOT = "www.";
+
+    public static String SCRAPER_CSS_QUERY = "script[type=application/ld+json]";
+
+    public static String SCRAPER_INVALID_SITE_URL = "Enter a valid job link";
 }
