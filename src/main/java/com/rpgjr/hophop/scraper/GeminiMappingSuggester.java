@@ -25,6 +25,8 @@ public class GeminiMappingSuggester {
     private static final String PROMPT = """
             Below are the tags found on a job posting page. Each line is: TYPE | KEY | SAMPLE VALUE.
             For each form field, choose the one line whose sample value holds that information.
+            SETUP is onsite, hybrid or remote work. It often sits inside the location line, for example "Makati City (Hybrid)". Pick that line.
+            One line can fill several fields. A salary line such as "PHP 80,000 - 100,000 per month" fills SALARY_MIN, SALARY_MAX and SALARY_CURRENCY.
             Leave a field out when no line fits. Copy TYPE and KEY exactly as listed. Do not invent keys.
             Fields: %s
             
@@ -38,7 +40,7 @@ public class GeminiMappingSuggester {
     }
 
     public List<MappingEntryDto> suggest(List<CandidateDto> candidates) {
-        String fields = Arrays.stream(MappingFormField.values()).map(Enum::name).collect(Collectors.joining(", "));
+        String fields = Arrays.stream(MappingFormField.values()).filter(f -> f != MappingFormField.REMARKS).map(Enum::name).collect(Collectors.joining(", "));
         String tags = candidates.stream()
                 .map(c -> c.type() + " | " + c.key() + " | " + c.value())
                 .collect(Collectors.joining("\n"));
@@ -72,8 +74,8 @@ public class GeminiMappingSuggester {
         Map<String, Object> entry = Map.of(
                 "type", "OBJECT",
                 "properties", Map.of(
-                        "field", Map.of("type", "STRING", "enum", Arrays.stream(MappingFormField.values()).map(Enum::name).toList()),
-                        "sourceType", Map.of("type", "STRING", "enum", List.of("META", "JSON_LD", "CSS")),
+                        "field", Map.of("type", "STRING", "enum", Arrays.stream(MappingFormField.values()).filter(f -> f != MappingFormField.REMARKS).map(Enum::name).toList()),
+                        "sourceType", Map.of("type", "STRING", "enum", List.of("META", "JSON_LD", "CSS", "PATTERN")),
                         "sourceKey", Map.of("type", "STRING")),
                 "required", List.of("field", "sourceType", "sourceKey"));
         return Map.of(

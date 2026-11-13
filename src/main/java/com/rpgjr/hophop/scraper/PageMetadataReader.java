@@ -10,6 +10,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Lists the tags on a page, and reads one tag by its key.
@@ -20,6 +21,18 @@ public class PageMetadataReader {
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private static final int MAX_CANDIDATES = 150;
     private static final int MAX_VALUE_CHARS = 200;
+
+    private record LinePattern(Pattern regex, int maxChars) {
+    }
+
+    // Lines found by their look, so they work on any site. Keep in step with the Mac app's BrowserPageReader.
+    private static final Map<String, LinePattern> LINE_PATTERNS = new LinkedHashMap<>();
+
+    static {
+        LINE_PATTERNS.put("salary", new LinePattern(Pattern.compile("(₱|PHP|USD|\\$)\\s?\\d[\\d,]*", Pattern.CASE_INSENSITIVE), 120));
+        LINE_PATTERNS.put("setup", new LinePattern(Pattern.compile("\\b(hybrid|remote|work from home|wfh|on-?site)\\b", Pattern.CASE_INSENSITIVE), 120));
+        LINE_PATTERNS.put("employment_type", new LinePattern(Pattern.compile("\\b(full[- ]?time|part[- ]?time|contract(or)?|temporary|freelance|internship)\\b", Pattern.CASE_INSENSITIVE), 60));
+    }
 
     // Page elements worth offering as tags. Keep in step with the list in the Mac app's BrowserPageReader.
     public static final List<String> CSS_SELECTORS = List.of(
@@ -45,6 +58,7 @@ public class PageMetadataReader {
             }
         }
         addCssValues(page, found);
+        addLineValues(page, found);
         addJsonValues(findJobPosting(page), "", found);
 
         return found.size() > MAX_CANDIDATES ? found.subList(0, MAX_CANDIDATES) : found;
@@ -62,6 +76,10 @@ public class PageMetadataReader {
             } catch (IllegalArgumentException e) {
                 return null; // the key broke the CSS selector
             }
+        }
+
+        if (type == MappingSourceType.PATTERN) {
+            return findLine(page, key);
         }
 
         if (type == MappingSourceType.CSS) {
@@ -135,6 +153,41 @@ public class PageMetadataReader {
             String text = element == null ? "" : element.text().trim();
             if (!text.isEmpty()) out.add(new CandidateDto(MappingSourceType.CSS, selector, cut(text)));
         }
+
+        // sites like JobStreet label each detail, for example data-automation="job-detail-location"
+        Set<String> seen = new HashSet<>();
+        for (Element element : page.select("[data-automation]")) {
+            String text = element.text().trim();
+            String selector = "[data-automation=\"" + element.attr("data-automation") + "\"]";
+            if (!text.isEmpty() && text.length() <= 120 && seen.add(selector) && seen.size() <= 40) {
+                out.add(new CandidateDto(MappingSourceType.CSS, selector, cut(text)));
+            }
+        }
+    }
+
+    // records the first visible line that looks like a salary, a work setup or an employment type
+    private void addLineValues(Document page, List<CandidateDto> out) {
+        for (String key : LINE_PATTERNS.keySet()) {
+            String line = findLine(page, key);
+            if (line != null) out.add(new CandidateDto(MappingSourceType.PATTERN, key, cut(line)));
+        }
+    }
+
+    // the first element without child elements whose text matches the pattern, or null
+    private String findLine(Document page, String key) {
+        LinePattern pattern = LINE_PATTERNS.get(key);
+        if (pattern == null || page.body() == null) return null;
+
+        for (Element element : page.body().select("*")) {
+            if (!element.children().isEmpty() || Set.of("script", "style", "noscript").contains(element.tagName())) {
+                continue;
+            }
+            String text = element.text().trim();
+            if (!text.isEmpty() && text.length() <= pattern.maxChars() && pattern.regex().matcher(text).find()) {
+                return text;
+            }
+        }
+        return null;
     }
 
     private String cut(String value) {
