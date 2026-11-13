@@ -1,8 +1,10 @@
 package com.rpgjr.hophop.controller;
 
+import com.rpgjr.hophop.model.dto.request.CreateApplicationRequestDto;
 import com.rpgjr.hophop.model.dto.request.StatusUpdateResquestDto;
 import com.rpgjr.hophop.model.entity.Application;
 import com.rpgjr.hophop.service.ApplicationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,6 +33,12 @@ public class ApplicationController {
             log.info(APPLICATION_ERROR_INTERNAL_SERVER_ERROR, ex);
             throw new Exception(INTERNAL_SERVER_ERROR, ex);
         }
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Application createApplication(@Valid @RequestBody CreateApplicationRequestDto request) {
+        return applicationService.createApplication(request);
     }
 
     @PatchMapping("/{applicationId}/status")
