@@ -73,7 +73,7 @@ public class GeminiMappingSuggester {
                 "type", "OBJECT",
                 "properties", Map.of(
                         "field", Map.of("type", "STRING", "enum", Arrays.stream(MappingFormField.values()).map(Enum::name).toList()),
-                        "sourceType", Map.of("type", "STRING", "enum", List.of("META", "JSON_LD")),
+                        "sourceType", Map.of("type", "STRING", "enum", List.of("META", "JSON_LD", "CSS")),
                         "sourceKey", Map.of("type", "STRING")),
                 "required", List.of("field", "sourceType", "sourceKey"));
         return Map.of(

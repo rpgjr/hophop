@@ -21,6 +21,15 @@ public class PageMetadataReader {
     private static final int MAX_CANDIDATES = 150;
     private static final int MAX_VALUE_CHARS = 200;
 
+    // Page elements worth offering as tags. Keep in step with the list in the Mac app's BrowserPageReader.
+    public static final List<String> CSS_SELECTORS = List.of(
+            "h1",
+            ".top-card-layout__title",
+            ".topcard__org-name-link",
+            ".topcard__flavor--bullet",
+            ".description__job-criteria-item:nth-child(2) .description__job-criteria-text",
+            ".show-more-less-html__markup");
+
     /**
      * Every meta tag and every JobPosting value on the page.
      */
@@ -35,6 +44,7 @@ public class PageMetadataReader {
                 found.add(new CandidateDto(MappingSourceType.META, key, cut(value)));
             }
         }
+        addCssValues(page, found);
         addJsonValues(findJobPosting(page), "", found);
 
         return found.size() > MAX_CANDIDATES ? found.subList(0, MAX_CANDIDATES) : found;
@@ -51,6 +61,16 @@ public class PageMetadataReader {
                 return value.isBlank() ? null : value.trim();
             } catch (IllegalArgumentException e) {
                 return null; // the key broke the CSS selector
+            }
+        }
+
+        if (type == MappingSourceType.CSS) {
+            try {
+                Element element = page.selectFirst(key);
+                String text = element == null ? "" : element.text().trim();
+                return text.isEmpty() ? null : text;
+            } catch (IllegalArgumentException e) {
+                return null; // the key is not a valid CSS selector
             }
         }
 
@@ -105,6 +125,15 @@ public class PageMetadataReader {
             }
         } else if (node.isValueNode() && !node.isNull() && !path.isEmpty() && !node.asString().isBlank()) {
             out.add(new CandidateDto(MappingSourceType.JSON_LD, path, cut(node.asString())));
+        }
+    }
+
+    // records the text of each known page element that exists and is not empty
+    private void addCssValues(Document page, List<CandidateDto> out) {
+        for (String selector : CSS_SELECTORS) {
+            Element element = page.selectFirst(selector);
+            String text = element == null ? "" : element.text().trim();
+            if (!text.isEmpty()) out.add(new CandidateDto(MappingSourceType.CSS, selector, cut(text)));
         }
     }
 

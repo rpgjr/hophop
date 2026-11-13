@@ -5,6 +5,7 @@ import com.rpgjr.hophop.model.dto.MappingEntryDto;
 import com.rpgjr.hophop.model.dto.SiteMappingGroupDto;
 import com.rpgjr.hophop.model.dto.request.CreateMappingsRequestDto;
 import com.rpgjr.hophop.model.dto.request.SaveMappingsRequestDto;
+import com.rpgjr.hophop.model.dto.request.SuggestTagsRequestDto;
 import com.rpgjr.hophop.model.dto.request.UrlRequestDto;
 import com.rpgjr.hophop.service.SiteMappingService;
 import jakarta.validation.Valid;
@@ -34,6 +35,11 @@ public class SiteMappingController {
     @PostMapping("/suggest")
     public List<MappingEntryDto> suggest(@Valid @RequestBody UrlRequestDto body) {
         return siteMappingService.suggest(body.url());
+    }
+
+    @PostMapping("/suggest-tags")
+    public List<MappingEntryDto> suggestTags(@Valid @RequestBody SuggestTagsRequestDto body) {
+        return siteMappingService.suggest(body.candidates());
     }
 
     @PostMapping

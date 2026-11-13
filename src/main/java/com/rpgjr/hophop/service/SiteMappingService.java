@@ -1,5 +1,6 @@
 package com.rpgjr.hophop.service;
 
+import com.rpgjr.hophop.model.dto.CandidateDto;
 import com.rpgjr.hophop.model.dto.InspectResultDto;
 import com.rpgjr.hophop.model.dto.MappingEntryDto;
 import com.rpgjr.hophop.model.dto.SiteMappingGroupDto;
@@ -55,6 +56,11 @@ public class SiteMappingService {
     public List<MappingEntryDto> suggest(String url) {
         Document page = jobPageFetcher.fetch(url);
         return geminiMappingSuggester.suggest(pageMetadataReader.candidates(page));
+    }
+
+    // POST /api/site-mappings/suggest-tags: same as suggest, for tags the app already read in its own browser
+    public List<MappingEntryDto> suggest(List<CandidateDto> candidates) {
+        return geminiMappingSuggester.suggest(candidates);
     }
 
     // POST /api/site-mappings: add a website that has no rules yet
