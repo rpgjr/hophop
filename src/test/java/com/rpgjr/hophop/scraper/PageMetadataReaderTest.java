@@ -89,4 +89,32 @@ class PageMetadataReaderTest {
 
         assertThat(pattern(found, "salary")).isEqualTo("30K PHP/month - 45K PHP/month");
     }
+
+    private static final String HEADING_ONLY_PAGE = """
+            <html><body>
+              <h2>Job details</h2><p>PHP 50,000 a month</p>
+              <section>
+                <h2 data-testid="vj-job-description-heading">Full job description</h2>
+                <div><p><b>Solve Outsource Inc.</b></p>
+                <p>Build Real Applications. Work Smarter with AI. Grow Your Development Career. Are you a junior developer who loves
+                experimenting with AI coding tools and turning ideas into working applications? Join a team that ships.</p></div>
+              </section>
+            </body></html>""";
+
+    @Test
+    void findsTheDescriptionUnderItsHeadingWhenThePageHasNoUsefulClass() {
+        List<CandidateDto> found = reader.candidates(Jsoup.parse(HEADING_ONLY_PAGE));
+
+        assertThat(pattern(found, "description"))
+                .startsWith("Solve Outsource Inc.")
+                .contains("Join a team that ships.")
+                .doesNotContain("Full job description");
+    }
+
+    @Test
+    void aSavedDescriptionRuleReadsTheSameTextBack() {
+        Document page = Jsoup.parse(HEADING_ONLY_PAGE);
+
+        assertThat(reader.resolve(page, MappingSourceType.PATTERN, "description")).contains("Build Real Applications.");
+    }
 }

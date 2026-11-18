@@ -26,6 +26,12 @@ public class PageMetadataReader {
     private static final int MAX_CANDIDATES = 150;
     private static final int MAX_VALUE_CHARS = 12000;
 
+    // The PATTERN key for the text under a "Job description" style heading. Keep in step with the Mac app's BrowserPageReader.
+    private static final String DESCRIPTION_KEY = "description";
+    private static final Pattern DESCRIPTION_HEADING = Pattern.compile(
+            "^(full\\s+)?job\\s+description$|^about\\s+(the|this)\\s+(job|role|position)$|^description$", Pattern.CASE_INSENSITIVE);
+    private static final int MIN_DESCRIPTION_CHARS = 150;
+
     private record LinePattern(Pattern regex, int maxChars) {
     }
 
@@ -94,7 +100,7 @@ public class PageMetadataReader {
         }
 
         if (type == MappingSourceType.PATTERN) {
-            return findLine(page, key);
+            return key.equals(DESCRIPTION_KEY) ? findDescription(page) : findLine(page, key);
         }
 
         if (type == MappingSourceType.CSS) {
@@ -187,6 +193,31 @@ public class PageMetadataReader {
             String line = findLine(page, key);
             if (line != null) out.add(new CandidateDto(MappingSourceType.PATTERN, key, cut(line)));
         }
+        String description = findDescription(page);
+        if (description != null) out.add(new CandidateDto(MappingSourceType.PATTERN, DESCRIPTION_KEY, cut(description)));
+    }
+
+    /**
+     * The text under a heading like "Full job description" or "About the job", or null.
+     * It starts at the heading and climbs to the smallest block that holds the text after it,
+     * so it works on sites whose description has no stable class or id.
+     */
+    private String findDescription(Document page) {
+        if (page.body() == null) return null;
+        for (Element heading : page.body().select("*")) {
+            if (Set.of("script", "style", "noscript").contains(heading.tagName())) continue;
+            String title = heading.ownText().trim();
+            if (title.isEmpty() || !DESCRIPTION_HEADING.matcher(title).matches()) continue;
+
+            Element block = heading;
+            for (int level = 0; level < 4 && block.parent() != null; level++) {
+                block = block.parent();
+                String text = readableText(block);
+                String body = text.startsWith(title) ? text.substring(title.length()).trim() : text;
+                if (body.length() >= MIN_DESCRIPTION_CHARS) return body;
+            }
+        }
+        return null;
     }
 
     // the first text that matches the pattern, or null. An element counts by its own text, so a chip

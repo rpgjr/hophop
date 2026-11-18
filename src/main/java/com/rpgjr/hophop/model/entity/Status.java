@@ -23,4 +23,6 @@ public class Status {
 	private String name;
 
 	private String color;
+
+	private int sortOrder;
 }

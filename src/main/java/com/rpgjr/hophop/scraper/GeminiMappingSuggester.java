@@ -27,6 +27,7 @@ public class GeminiMappingSuggester {
             For each form field, choose the one line whose sample value holds that information.
             SETUP is onsite, hybrid or remote work. It often sits inside the location line, for example "Makati City (Hybrid)". Pick that line.
             One line can fill several fields. A salary line such as "PHP 80,000 - 100,000 per month" fills SALARY_MIN, SALARY_MAX and SALARY_CURRENCY.
+            DESCRIPTION is the long job description text. A line such as PATTERN | description is the text found under a "Job description" or "About the job" heading. Prefer it, or another long block of the posting, for DESCRIPTION.
             Leave a field out when no line fits. Copy TYPE and KEY exactly as listed. Do not invent keys.
             Fields: %s
             

@@ -1,5 +1,6 @@
 package com.rpgjr.hophop.controller;
 
+import com.rpgjr.hophop.model.dto.request.StatusOrderRequestDto;
 import com.rpgjr.hophop.model.dto.request.StatusRequestDto;
 import com.rpgjr.hophop.model.entity.Status;
 import com.rpgjr.hophop.service.StatusService;
@@ -34,6 +35,11 @@ public class StatusController {
     @ResponseStatus(HttpStatus.CREATED)
     public Status createStatus(@Valid @RequestBody StatusRequestDto request) {
         return statusService.createStatus(request);
+    }
+
+    @PutMapping("/order")
+    public List<Status> reorderStatuses(@Valid @RequestBody StatusOrderRequestDto request) {
+        return statusService.reorder(request.ids());
     }
 
     @PutMapping("/{statusId}")

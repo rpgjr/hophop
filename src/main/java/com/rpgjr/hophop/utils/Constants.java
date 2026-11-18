@@ -15,6 +15,8 @@ public class Constants {
 
     public static String STATUS_ERROR_IN_USE = STATUS + "Applications still use this status. Move them to another status first.";
 
+    public static String STATUS_ERROR_ORDER = STATUS + "The order must list every status once";
+
     public static String STATUS_ERROR_UNKNOWN = STATUS + "Unknown Status with Status ID: ";
 
     public static String APPLICATION_ERROR_UNKNOWN = APPLICATION + "Unknown Application with Application ID: ";

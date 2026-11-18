@@ -10,11 +10,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.rpgjr.hophop.utils.Constants.STATUS_ERROR_DUPLICATE;
 import static com.rpgjr.hophop.utils.Constants.STATUS_ERROR_IN_USE;
 import static com.rpgjr.hophop.utils.Constants.STATUS_ERROR_LAST;
+import static com.rpgjr.hophop.utils.Constants.STATUS_ERROR_ORDER;
 import static com.rpgjr.hophop.utils.Constants.STATUS_ERROR_UNKNOWN;
 
 @Service
@@ -26,7 +29,7 @@ public class StatusService {
     private final ApplicationRepository applicationRepository;
 
     public List<Status> getAllStatuses() {
-        return statusRepository.findAllByOrderByIdAsc();
+        return statusRepository.findAllByOrderBySortOrderAscIdAsc();
     }
 
     public Status getStatusById(Long statusId) {
@@ -35,7 +38,24 @@ public class StatusService {
     }
 
     public Status createStatus(StatusRequestDto request) {
-        return save(new Status(), request);
+        Status status = new Status();
+        status.setSortOrder(statusRepository.findFirstByOrderBySortOrderDesc().map(last -> last.getSortOrder() + 1).orElse(0));
+        return save(status, request);
+    }
+
+    /**
+     * Puts the statuses in the given order. The list must name every status once.
+     */
+    public List<Status> reorder(List<Long> ids) {
+        List<Status> all = statusRepository.findAll();
+        if (ids.size() != all.size() || !new HashSet<>(ids).equals(all.stream().map(Status::getId).collect(Collectors.toSet()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, STATUS_ERROR_ORDER);
+        }
+        for (Status status : all) {
+            status.setSortOrder(ids.indexOf(status.getId()));
+        }
+        statusRepository.saveAll(all);
+        return getAllStatuses();
     }
 
     public Status updateStatus(Long statusId, StatusRequestDto request) {
