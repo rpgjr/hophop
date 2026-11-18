@@ -40,10 +40,7 @@ public class ApplicationService {
     }
 
     public Application createApplication(CreateApplicationRequestDto request) {
-        if (request.salaryMax() != null
-                && (request.salaryMin() == null || request.salaryMax().compareTo(request.salaryMin()) < 0)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, APPLICATION_ERROR_SALARY_RANGE);
-        }
+        checkSalaryRange(request);
 
         Application application = Application.builder()
                 .status(statusService.getStatusById(request.statusId()))
@@ -63,6 +60,36 @@ public class ApplicationService {
             return applicationRepository.save(application);
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
+        }
+    }
+
+    public Application updateApplication(Long applicationId, CreateApplicationRequestDto request) {
+        checkSalaryRange(request);
+
+        Application application = getApplicationById(applicationId);
+        application.setStatus(statusService.getStatusById(request.statusId()));
+        application.setTitle(request.title().trim());
+        application.setCompany(request.company().trim());
+        application.setSalaryMin(request.salaryMin());
+        application.setSalaryMax(request.salaryMax());
+        application.setSalaryCurrency(ofNullable(request.salaryCurrency()).orElse(Currency.PHP));
+        application.setEmploymentType(request.employmentType());
+        application.setSetup(ofNullable(request.setup()).orElse(Setup.Onsite));
+        application.setRemarks(request.remarks());
+        application.setLink(request.link().trim());
+        application.setAppliedDate(request.appliedDate());
+
+        try {
+            return applicationRepository.saveAndFlush(application);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
+        }
+    }
+
+    private void checkSalaryRange(CreateApplicationRequestDto request) {
+        if (request.salaryMax() != null
+                && (request.salaryMin() == null || request.salaryMax().compareTo(request.salaryMin()) < 0)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, APPLICATION_ERROR_SALARY_RANGE);
         }
     }
 

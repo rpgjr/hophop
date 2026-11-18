@@ -41,6 +41,11 @@ public class ApplicationController {
         return applicationService.createApplication(request);
     }
 
+    @PutMapping("/{applicationId}")
+    public Application updateApplication(@PathVariable Long applicationId, @Valid @RequestBody CreateApplicationRequestDto request) {
+        return applicationService.updateApplication(applicationId, request);
+    }
+
     @PatchMapping("/{applicationId}/status")
     public Application updateApplicationStatus(@PathVariable Long applicationId, @RequestBody StatusUpdateResquestDto status) throws Exception {
         try {

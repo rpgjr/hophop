@@ -23,6 +23,7 @@ import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -35,7 +36,6 @@ public class Application {
 
 	@ManyToOne(fetch = FetchType.EAGER, optional = false)
 	@JoinColumn(name = "status_id")
-	@Setter
 	private Status status;
 
 	private String title;
