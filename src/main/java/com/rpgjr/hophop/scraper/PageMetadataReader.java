@@ -4,6 +4,10 @@ import com.rpgjr.hophop.enums.MappingSourceType;
 import com.rpgjr.hophop.model.dto.CandidateDto;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
+import org.jsoup.select.NodeTraversor;
+import org.jsoup.select.NodeVisitor;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -20,7 +24,7 @@ public class PageMetadataReader {
 
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private static final int MAX_CANDIDATES = 150;
-    private static final int MAX_VALUE_CHARS = 4000;
+    private static final int MAX_VALUE_CHARS = 12000;
 
     private record LinePattern(Pattern regex, int maxChars) {
     }
@@ -29,7 +33,7 @@ public class PageMetadataReader {
     private static final Map<String, LinePattern> LINE_PATTERNS = new LinkedHashMap<>();
 
     static {
-        LINE_PATTERNS.put("salary", new LinePattern(Pattern.compile("(₱|PHP|USD|\\$)\\s?\\d[\\d,]*", Pattern.CASE_INSENSITIVE), 120));
+        LINE_PATTERNS.put("salary", new LinePattern(Pattern.compile("(₱|PHP|USD|\\$)\\s?\\d[\\d,]*|\\d[\\d,.]*\\s?k?\\s?(₱|PHP|USD)", Pattern.CASE_INSENSITIVE), 120));
         LINE_PATTERNS.put("setup", new LinePattern(Pattern.compile("\\b(hybrid|remote|work from home|wfh|on-?site)\\b", Pattern.CASE_INSENSITIVE), 120));
         LINE_PATTERNS.put("employment_type", new LinePattern(Pattern.compile("\\b(full[- ]?time|part[- ]?time|contract(or)?|temporary|freelance|internship)\\b", Pattern.CASE_INSENSITIVE), 60));
     }
@@ -41,7 +45,18 @@ public class PageMetadataReader {
             ".topcard__org-name-link",
             ".topcard__flavor--bullet",
             ".description__job-criteria-item:nth-child(2) .description__job-criteria-text",
-            ".show-more-less-html__markup");
+            ".show-more-less-html__markup",
+            "[data-testid=\"jobsearch-JobInfoHeader-title\"]",
+            "[data-testid=\"inlineHeader-companyName\"]",
+            "[data-testid=\"inlineHeader-companyLocation\"]",
+            "#salaryInfoAndJobType",
+            "#jobDescriptionText",
+            "[data-automation=\"jobAdDetails\"]",
+            ".job-details-fit-level-preferences",
+            ".job-details-jobs-unified-top-card__job-title",
+            ".job-details-jobs-unified-top-card__company-name",
+            ".job-details-jobs-unified-top-card__primary-description-container",
+            "#job-details");
 
     /**
      * Every meta tag and every JobPosting value on the page.
@@ -85,7 +100,7 @@ public class PageMetadataReader {
         if (type == MappingSourceType.CSS) {
             try {
                 Element element = page.selectFirst(key);
-                String text = element == null ? "" : element.text().trim();
+                String text = element == null ? "" : readableText(element);
                 return text.isEmpty() ? null : text;
             } catch (IllegalArgumentException e) {
                 return null; // the key is not a valid CSS selector
@@ -150,15 +165,16 @@ public class PageMetadataReader {
     private void addCssValues(Document page, List<CandidateDto> out) {
         for (String selector : CSS_SELECTORS) {
             Element element = page.selectFirst(selector);
-            String text = element == null ? "" : element.text().trim();
+            String text = element == null ? "" : readableText(element);
             if (!text.isEmpty()) out.add(new CandidateDto(MappingSourceType.CSS, selector, cut(text)));
         }
 
-        // sites like JobStreet label each detail, for example data-automation="job-detail-location"
+        // sites like JobStreet and Indeed label each detail, for example data-automation="job-detail-location"
         Set<String> seen = new HashSet<>();
-        for (Element element : page.select("[data-automation]")) {
-            String text = element.text().trim();
-            String selector = "[data-automation=\"" + element.attr("data-automation") + "\"]";
+        for (Element element : page.select("[data-automation], [data-testid]")) {
+            String attribute = element.hasAttr("data-automation") ? "data-automation" : "data-testid";
+            String text = readableText(element);
+            String selector = "[" + attribute + "=\"" + element.attr(attribute) + "\"]";
             if (!text.isEmpty() && text.length() <= 120 && seen.add(selector) && seen.size() <= 40) {
                 out.add(new CandidateDto(MappingSourceType.CSS, selector, cut(text)));
             }
@@ -173,21 +189,52 @@ public class PageMetadataReader {
         }
     }
 
-    // the first element without child elements whose text matches the pattern, or null
+    // the first text that matches the pattern, or null. An element counts by its own text, so a chip
+    // like <span><svg/>On-site</span> is found even though it has an icon inside.
     private String findLine(Document page, String key) {
         LinePattern pattern = LINE_PATTERNS.get(key);
         if (pattern == null || page.body() == null) return null;
 
         for (Element element : page.body().select("*")) {
-            if (!element.children().isEmpty() || Set.of("script", "style", "noscript").contains(element.tagName())) {
-                continue;
-            }
-            String text = element.text().trim();
+            if (Set.of("script", "style", "noscript").contains(element.tagName())) continue;
+            String text = element.ownText().trim();
             if (!text.isEmpty() && text.length() <= pattern.maxChars() && pattern.regex().matcher(text).find()) {
                 return text;
             }
         }
         return null;
+    }
+
+    /**
+     * The text of an element with its paragraphs, line breaks and list items kept,
+     * so a long job description stays readable instead of running together.
+     */
+    private String readableText(Element element) {
+        StringBuilder out = new StringBuilder();
+        NodeTraversor.traverse(new NodeVisitor() {
+            @Override
+            public void head(Node node, int depth) {
+                if (node instanceof TextNode text) {
+                    out.append(text.text());
+                } else if (node instanceof Element child) {
+                    if (child.tagName().equals("br")) out.append('\n');
+                    else if (child.tagName().equals("li")) {
+                        if (!out.isEmpty() && out.charAt(out.length() - 1) != '\n') out.append('\n');
+                        out.append("• ");
+                    } else if (child.isBlock()) out.append('\n');
+                }
+            }
+
+            @Override
+            public void tail(Node node, int depth) {
+                if (node instanceof Element child && child.isBlock() && !child.tagName().equals("li")) out.append('\n');
+            }
+        }, element);
+        return out.toString()
+                .replaceAll("[ \\t]+\n", "\n")
+                .replaceAll("\n[ \\t]+", "\n")
+                .replaceAll("\n{3,}", "\n\n")
+                .trim();
     }
 
     private String cut(String value) {

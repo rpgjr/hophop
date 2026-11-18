@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
+    long countByStatusId(Long statusId);
+
     List<Application> findByAppliedDateBetweenOrderByAppliedDateAscIdAsc(LocalDate from, LocalDate to);
 
 }
