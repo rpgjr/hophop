@@ -3,6 +3,7 @@ package com.rpgjr.hophop.model.entity;
 import com.rpgjr.hophop.enums.Currency;
 import com.rpgjr.hophop.enums.EmploymentType;
 import com.rpgjr.hophop.enums.Setup;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -55,6 +56,9 @@ public class Application {
 	private Setup setup;
 
 	private String remarks;
+
+	@Column(columnDefinition = "TEXT")
+	private String description;
 
 	private String link;
 

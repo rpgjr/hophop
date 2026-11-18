@@ -42,11 +42,18 @@ public class GeminiMappingSuggester {
     public List<MappingEntryDto> suggest(List<CandidateDto> candidates) {
         String fields = Arrays.stream(MappingFormField.values()).filter(f -> f != MappingFormField.REMARKS).map(Enum::name).collect(Collectors.joining(", "));
         String tags = candidates.stream()
-                .map(c -> c.type() + " | " + c.key() + " | " + c.value())
+                .map(c -> c.type() + " | " + c.key() + " | " + preview(c.value()))
                 .collect(Collectors.joining("\n"));
 
         String json = geminiClient.generateJson(PROMPT.formatted(fields, tags), schema());
         return parse(json, candidates);
+    }
+
+    /**
+     * Long values like a job description only need their start for the AI to recognise them.
+     */
+    private static String preview(String value) {
+        return value.length() > 200 ? value.substring(0, 200) : value;
     }
 
     /**

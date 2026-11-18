@@ -6,6 +6,7 @@ import com.rpgjr.hophop.enums.EmploymentType;
 import com.rpgjr.hophop.enums.Setup;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +31,8 @@ public record CreateApplicationRequestDto(
         Setup setup,
 
         String remarks,
+
+        @Size(max = 20000) String description,
 
         @NotBlank String link,
 

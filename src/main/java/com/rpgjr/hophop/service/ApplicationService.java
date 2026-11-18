@@ -52,6 +52,7 @@ public class ApplicationService {
                 .employmentType(request.employmentType())
                 .setup(ofNullable(request.setup()).orElse(Setup.Onsite))
                 .remarks(request.remarks())
+                .description(request.description())
                 .link(request.link().trim())
                 .appliedDate(request.appliedDate())
                 .build();
@@ -76,6 +77,7 @@ public class ApplicationService {
         application.setEmploymentType(request.employmentType());
         application.setSetup(ofNullable(request.setup()).orElse(Setup.Onsite));
         application.setRemarks(request.remarks());
+        application.setDescription(request.description());
         application.setLink(request.link().trim());
         application.setAppliedDate(request.appliedDate());
 

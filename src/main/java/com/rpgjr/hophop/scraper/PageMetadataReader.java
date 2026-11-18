@@ -20,7 +20,7 @@ public class PageMetadataReader {
 
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private static final int MAX_CANDIDATES = 150;
-    private static final int MAX_VALUE_CHARS = 200;
+    private static final int MAX_VALUE_CHARS = 4000;
 
     private record LinePattern(Pattern regex, int maxChars) {
     }
