@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static com.rpgjr.hophop.utils.Constants.APPLICATION_ERROR_DUPLICATE_LINK;
+import static com.rpgjr.hophop.utils.Constants.APPLICATION_ERROR_FUTURE_DATE;
 import static com.rpgjr.hophop.utils.Constants.APPLICATION_ERROR_SALARY_RANGE;
 import static com.rpgjr.hophop.utils.Constants.APPLICATION_ERROR_UNKNOWN;
 import static java.util.Optional.ofNullable;
@@ -41,6 +42,7 @@ public class ApplicationService {
 
     public Application createApplication(CreateApplicationRequestDto request) {
         checkSalaryRange(request);
+        checkNotFuture(request);
 
         Application application = Application.builder()
                 .status(statusService.getStatusById(request.statusId()))
@@ -66,6 +68,7 @@ public class ApplicationService {
 
     public Application updateApplication(Long applicationId, CreateApplicationRequestDto request) {
         checkSalaryRange(request);
+        checkNotFuture(request);
 
         Application application = getApplicationById(applicationId);
         application.setStatus(statusService.getStatusById(request.statusId()));
@@ -85,6 +88,13 @@ public class ApplicationService {
             return applicationRepository.saveAndFlush(application);
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
+        }
+    }
+
+    // one day of slack, so a user ahead of the server's clock is not refused on their own today
+    private void checkNotFuture(CreateApplicationRequestDto request) {
+        if (request.appliedDate().isAfter(LocalDate.now().plusDays(1))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, APPLICATION_ERROR_FUTURE_DATE);
         }
     }
 

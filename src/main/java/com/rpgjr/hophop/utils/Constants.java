@@ -23,6 +23,7 @@ public class Constants {
 
     public static String APPLICATION_ERROR_DUPLICATE_LINK = APPLICATION + "This job link is already saved";
 
+    public static String APPLICATION_ERROR_FUTURE_DATE = APPLICATION + "The applied date cannot be in the future";
     public static String APPLICATION_ERROR_SALARY_RANGE = APPLICATION + "Max salary must be at least the min salary";
 
     public static String APPLICATION_ERROR_DELETE = APPLICATION + "Error deleting Application with Application ID: {} Error: {}";
