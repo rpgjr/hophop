@@ -3,6 +3,7 @@ package com.rpgjr.hophop.controller;
 import com.rpgjr.hophop.model.dto.request.CreateApplicationRequestDto;
 import com.rpgjr.hophop.model.dto.request.StatusUpdateResquestDto;
 import com.rpgjr.hophop.model.entity.Application;
+import com.rpgjr.hophop.model.entity.StatusHistory;
 import com.rpgjr.hophop.service.ApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,11 @@ public class ApplicationController {
             log.info(APPLICATION_ERROR_INTERNAL_SERVER_ERROR, ex);
             throw new Exception(INTERNAL_SERVER_ERROR, ex);
         }
+    }
+
+    @GetMapping("/{applicationId}/history")
+    public List<StatusHistory> getStatusHistory(@PathVariable Long applicationId) {
+        return applicationService.getStatusHistory(applicationId);
     }
 
     @DeleteMapping("/{applicationId}")

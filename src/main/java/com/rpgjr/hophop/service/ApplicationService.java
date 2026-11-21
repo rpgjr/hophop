@@ -5,15 +5,19 @@ import com.rpgjr.hophop.enums.Setup;
 import com.rpgjr.hophop.model.dto.request.CreateApplicationRequestDto;
 import com.rpgjr.hophop.model.entity.Application;
 import com.rpgjr.hophop.model.entity.Status;
+import com.rpgjr.hophop.model.entity.StatusHistory;
 import com.rpgjr.hophop.repository.ApplicationRepository;
+import com.rpgjr.hophop.repository.StatusHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.rpgjr.hophop.utils.Constants.APPLICATION_ERROR_DUPLICATE_LINK;
@@ -29,6 +33,8 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
 
+    private final StatusHistoryRepository statusHistoryRepository;
+
     private final StatusService statusService;
 
     public List<Application> getAllApplicationsByDateRange(LocalDate from, LocalDate to) {
@@ -40,6 +46,7 @@ public class ApplicationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, APPLICATION_ERROR_UNKNOWN + applicationId));
     }
 
+    @Transactional
     public Application createApplication(CreateApplicationRequestDto request) {
         checkSalaryRange(request);
         checkNotFuture(request);
@@ -60,18 +67,40 @@ public class ApplicationService {
                 .build();
 
         try {
-            return applicationRepository.save(application);
+            Application saved = applicationRepository.save(application);
+            // the first entry is dated on the day applied, so the history starts with the application
+            recordStatusChange(saved.getId(), null, saved.getStatus(), saved.getAppliedDate().atStartOfDay());
+            return saved;
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
         }
     }
 
+    public List<StatusHistory> getStatusHistory(Long applicationId) {
+        getApplicationById(applicationId);
+        return statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(applicationId);
+    }
+
+    private void recordStatusChange(Long applicationId, Status from, Status to, LocalDateTime at) {
+        statusHistoryRepository.save(StatusHistory.builder()
+                .applicationId(applicationId)
+                .fromStatus(from == null ? null : from.getName())
+                .fromColor(from == null ? null : from.getColor())
+                .toStatus(to.getName())
+                .toColor(to.getColor())
+                .changedAt(at)
+                .build());
+    }
+
+    @Transactional
     public Application updateApplication(Long applicationId, CreateApplicationRequestDto request) {
         checkSalaryRange(request);
         checkNotFuture(request);
 
         Application application = getApplicationById(applicationId);
-        application.setStatus(statusService.getStatusById(request.statusId()));
+        Status previous = application.getStatus();
+        Status next = statusService.getStatusById(request.statusId());
+        application.setStatus(next);
         application.setTitle(request.title().trim());
         application.setCompany(request.company().trim());
         application.setSalaryMin(request.salaryMin());
@@ -85,7 +114,11 @@ public class ApplicationService {
         application.setAppliedDate(request.appliedDate());
 
         try {
-            return applicationRepository.saveAndFlush(application);
+            Application saved = applicationRepository.saveAndFlush(application);
+            if (!previous.getId().equals(next.getId())) {
+                recordStatusChange(applicationId, previous, next, LocalDateTime.now());
+            }
+            return saved;
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
         }
@@ -105,12 +138,18 @@ public class ApplicationService {
         }
     }
 
+    @Transactional
     public Application updateApplicationByStatus(Long applicationId, Long statusId) {
         Application application = getApplicationById(applicationId);
+        Status previous = application.getStatus();
         Status status = statusService.getStatusById(statusId);
 
         application.setStatus(status);
-        return applicationRepository.save(application);
+        Application saved = applicationRepository.save(application);
+        if (!previous.getId().equals(status.getId())) {
+            recordStatusChange(applicationId, previous, status, LocalDateTime.now());
+        }
+        return saved;
     }
 
     public void deleteApplicationById(Long applicationId) {
