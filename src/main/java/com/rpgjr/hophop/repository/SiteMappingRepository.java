@@ -8,16 +8,14 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface SiteMappingRepository extends JpaRepository<SiteMapping, String> {
+public interface SiteMappingRepository extends JpaRepository<SiteMapping, Long> {
 
-    List<SiteMapping> findBySiteHost(String siteHost);
+    List<SiteMapping> findByGroupIdOrderByIdAsc(Long groupId);
 
-    List<SiteMapping> findAllByOrderBySiteHostAscIdAsc();
-
-    boolean existsBySiteHost(String siteHost);
+    List<SiteMapping> findAllByOrderByGroupIdAscIdAsc();
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("delete from SiteMapping m where m.siteHost = :host")
-    void deleteBySiteHost(@Param("host") String host);
+    @Query("delete from SiteMapping m where m.groupId = :groupId")
+    void deleteByGroupId(@Param("groupId") Long groupId);
 
 }

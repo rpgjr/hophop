@@ -19,6 +19,10 @@ public class Constants {
 
     public static String STATUS_ERROR_UNKNOWN = STATUS + "Unknown Status with Status ID: ";
 
+    public static String MAPPING_ERROR_UNKNOWN = "Unknown mapping with ID: ";
+
+    public static String MAPPING_ERROR_DUPLICATE_NAME = "A mapping is already named ";
+
     public static String APPLICATION_ERROR_UNKNOWN = APPLICATION + "Unknown Application with Application ID: ";
 
     public static String APPLICATION_ERROR_DUPLICATE_LINK = APPLICATION + "This job link is already saved";

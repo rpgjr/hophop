@@ -62,6 +62,8 @@ public class Application {
 
 	private String location;
 
+	private String website;
+
 	private String link;
 
 	private LocalDate appliedDate;

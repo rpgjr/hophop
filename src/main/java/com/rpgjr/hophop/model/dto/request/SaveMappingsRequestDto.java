@@ -2,11 +2,20 @@ package com.rpgjr.hophop.model.dto.request;
 
 import com.rpgjr.hophop.model.dto.MappingEntryDto;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
 public record SaveMappingsRequestDto(
+
+        @NotBlank
+        @Size(max = 100)
+        String name,
+
+        @Size(max = 100)
+        String country,
 
         @NotNull
         @Valid
