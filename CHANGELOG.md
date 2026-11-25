@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/rpgjr/hophop/compare/v1.1.0...v1.2.0) (2026-11-25)
+
+
+### Features
+
+* Add Flyway ([#9](https://github.com/rpgjr/hophop/issues/9)) ([85cb6bf](https://github.com/rpgjr/hophop/commit/85cb6bf6ed6d28ba438d48201f7f1cf137528dfe))
+* flyway fix ([#11](https://github.com/rpgjr/hophop/issues/11)) ([dac3ff8](https://github.com/rpgjr/hophop/commit/dac3ff885d1ad1780f65ce390d6baafedb852d39))
+
 ## [1.1.0](https://github.com/rpgjr/hophop/compare/v1.0.0...v1.1.0) (2026-11-25)
 
 
