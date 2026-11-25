@@ -25,7 +25,6 @@ CREATE TABLE applications (
   location        VARCHAR(255) NULL,
   employment_type ENUM('Full-time', 'Part-time', 'Contractual') NULL,
   source_site     VARCHAR(100) NULL,
-  description     TEXT NULL,
 
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
