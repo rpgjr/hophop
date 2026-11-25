@@ -61,6 +61,7 @@ public class ApplicationService {
                 .employmentType(request.employmentType())
                 .setup(ofNullable(request.setup()).orElse(Setup.Onsite))
                 .remarks(request.remarks())
+                .location(blankToNull(request.location()))
                 .description(request.description())
                 .link(request.link().trim())
                 .appliedDate(request.appliedDate())
@@ -109,6 +110,7 @@ public class ApplicationService {
         application.setEmploymentType(request.employmentType());
         application.setSetup(ofNullable(request.setup()).orElse(Setup.Onsite));
         application.setRemarks(request.remarks());
+        application.setLocation(blankToNull(request.location()));
         application.setDescription(request.description());
         application.setLink(request.link().trim());
         application.setAppliedDate(request.appliedDate());
@@ -122,6 +124,10 @@ public class ApplicationService {
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, APPLICATION_ERROR_DUPLICATE_LINK);
         }
+    }
+
+    private String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text.trim();
     }
 
     // one day of slack, so a user ahead of the server's clock is not refused on their own today
