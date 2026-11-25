@@ -34,6 +34,8 @@ public record CreateApplicationRequestDto(
 
         @Size(max = 255) String location,
 
+        @Size(max = 100) String website,
+
         @Size(max = 20000) String description,
 
         @NotBlank String link,

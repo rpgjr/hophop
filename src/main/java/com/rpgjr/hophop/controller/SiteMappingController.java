@@ -45,17 +45,17 @@ public class SiteMappingController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SiteMappingGroupDto create(@Valid @RequestBody CreateMappingsRequestDto body) {
-        return siteMappingService.create(body.host(), body.mappings());
+        return siteMappingService.create(body);
     }
 
-    @PutMapping("/{host}")
-    public SiteMappingGroupDto update(@PathVariable String host, @Valid @RequestBody SaveMappingsRequestDto body) {
-        return siteMappingService.update(host, body.mappings());
+    @PutMapping("/{id}")
+    public SiteMappingGroupDto update(@PathVariable Long id, @Valid @RequestBody SaveMappingsRequestDto body) {
+        return siteMappingService.update(id, body);
     }
 
-    @DeleteMapping("/{host}")
+    @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String host) {
-        siteMappingService.delete(host);
+    public void delete(@PathVariable Long id) {
+        siteMappingService.delete(id);
     }
 }

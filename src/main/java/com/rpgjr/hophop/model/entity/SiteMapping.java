@@ -17,7 +17,7 @@ public class SiteMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String siteHost;
+    private Long groupId;
 
     @Enumerated(EnumType.STRING)
     private MappingFormField fieldName;

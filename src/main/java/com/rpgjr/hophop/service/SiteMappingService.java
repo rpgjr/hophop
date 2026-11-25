@@ -4,7 +4,12 @@ import com.rpgjr.hophop.model.dto.CandidateDto;
 import com.rpgjr.hophop.model.dto.InspectResultDto;
 import com.rpgjr.hophop.model.dto.MappingEntryDto;
 import com.rpgjr.hophop.model.dto.SiteMappingGroupDto;
+import com.rpgjr.hophop.model.dto.request.CreateMappingsRequestDto;
+import com.rpgjr.hophop.model.dto.request.SaveMappingsRequestDto;
+import com.rpgjr.hophop.model.entity.MappingGroup;
 import com.rpgjr.hophop.model.entity.SiteMapping;
+import com.rpgjr.hophop.repository.ApplicationRepository;
+import com.rpgjr.hophop.repository.MappingGroupRepository;
 import com.rpgjr.hophop.repository.SiteMappingRepository;
 import com.rpgjr.hophop.scraper.GeminiMappingSuggester;
 import com.rpgjr.hophop.scraper.JobPageFetcher;
@@ -22,23 +27,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.rpgjr.hophop.utils.Constants.MAPPING_ERROR_DUPLICATE_NAME;
+import static com.rpgjr.hophop.utils.Constants.MAPPING_ERROR_UNKNOWN;
+
 @Service
 @RequiredArgsConstructor
 public class SiteMappingService {
 
     private final SiteMappingRepository siteMappingRepository;
+    private final MappingGroupRepository mappingGroupRepository;
+    private final ApplicationRepository applicationRepository;
     private final JobPageFetcher jobPageFetcher;
     private final PageMetadataReader pageMetadataReader;
     private final GeminiMappingSuggester geminiMappingSuggester;
 
-    // GET /api/site-mappings: every saved website with its rules
+    // GET /api/site-mappings: every saved mapping with its rules
     public List<SiteMappingGroupDto> list() {
-        Map<String, List<MappingEntryDto>> byHost = new LinkedHashMap<>();
-        for (SiteMapping row : siteMappingRepository.findAllByOrderBySiteHostAscIdAsc()) {
-            byHost.computeIfAbsent(row.getSiteHost(), host -> new ArrayList<>()).add(MappingEntryDto.from(row));
-        }
-        return byHost.entrySet().stream()
-                .map(entry -> new SiteMappingGroupDto(entry.getKey(), entry.getValue()))
+        Map<Long, List<MappingEntryDto>> rules = rulesByGroup();
+        return mappingGroupRepository.findAllByOrderByNameAsc().stream()
+                .map(group -> SiteMappingGroupDto.from(group, rules.getOrDefault(group.getId(), List.of())))
                 .toList();
     }
 
@@ -46,10 +53,19 @@ public class SiteMappingService {
     public InspectResultDto inspect(String url) {
         String host = HostUtils.hostOf(url);
         Document page = jobPageFetcher.fetch(url);
-        List<MappingEntryDto> saved = siteMappingRepository.findBySiteHost(host).stream()
-                .map(MappingEntryDto::from)
+        Map<Long, List<MappingEntryDto>> rules = rulesByGroup();
+        List<SiteMappingGroupDto> groups = mappingGroupRepository.findBySiteHostOrderByNameAsc(host).stream()
+                .map(group -> SiteMappingGroupDto.from(group, rules.getOrDefault(group.getId(), List.of())))
                 .toList();
-        return new InspectResultDto(host, pageMetadataReader.candidates(page), saved);
+        return new InspectResultDto(host, pageMetadataReader.candidates(page), groups);
+    }
+
+    private Map<Long, List<MappingEntryDto>> rulesByGroup() {
+        Map<Long, List<MappingEntryDto>> byGroup = new LinkedHashMap<>();
+        for (SiteMapping row : siteMappingRepository.findAllByOrderByGroupIdAscIdAsc()) {
+            byGroup.computeIfAbsent(row.getGroupId(), id -> new ArrayList<>()).add(MappingEntryDto.from(row));
+        }
+        return byGroup;
     }
 
     // POST /api/site-mappings/suggest: AI picks a tag for each field, nothing saved
@@ -63,47 +79,65 @@ public class SiteMappingService {
         return geminiMappingSuggester.suggest(candidates);
     }
 
-    // POST /api/site-mappings: add a website that has no rules yet
+    // POST /api/site-mappings: add a named mapping for a website
     @Transactional
-    public SiteMappingGroupDto create(String host, List<MappingEntryDto> entries) {
-        String siteHost = HostUtils.normalizeHost(host);
-        if (siteMappingRepository.existsBySiteHost(siteHost)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, siteHost + " already has rules. Edit it instead.");
+    public SiteMappingGroupDto create(CreateMappingsRequestDto request) {
+        String name = request.name().trim();
+        if (mappingGroupRepository.existsByNameIgnoreCase(name)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, MAPPING_ERROR_DUPLICATE_NAME + name);
         }
-        return replaceRules(siteHost, entries);
+        MappingGroup group = mappingGroupRepository.save(MappingGroup.builder()
+                .name(name)
+                .siteHost(HostUtils.normalizeHost(request.host()))
+                .country(blankToNull(request.country()))
+                .build());
+        return replaceRules(group, request.mappings());
     }
 
-    // PUT /api/site-mappings/{host}: replace all rules of a website that already has rules
+    // PUT /api/site-mappings/{id}: rename a mapping, change its country and replace its rules
     @Transactional
-    public SiteMappingGroupDto update(String host, List<MappingEntryDto> entries) {
-        String siteHost = HostUtils.normalizeHost(host);
-        if (!siteMappingRepository.existsBySiteHost(siteHost)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, siteHost + " has no rules yet. Add it first.");
+    public SiteMappingGroupDto update(Long id, SaveMappingsRequestDto request) {
+        MappingGroup group = mappingGroupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, MAPPING_ERROR_UNKNOWN + id));
+        String name = request.name().trim();
+        if (mappingGroupRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, MAPPING_ERROR_DUPLICATE_NAME + name);
         }
-        return replaceRules(siteHost, entries);
+        if (!group.getName().equals(name)) {
+            applicationRepository.renameWebsite(group.getName(), name);
+            group.setName(name);
+        }
+        group.setCountry(blankToNull(request.country()));
+        mappingGroupRepository.save(group);
+        return replaceRules(group, request.mappings());
     }
 
     // shared by create and update: delete the old rows, insert the new ones
-    private SiteMappingGroupDto replaceRules(String siteHost, List<MappingEntryDto> entries) {
+    private SiteMappingGroupDto replaceRules(MappingGroup group, List<MappingEntryDto> entries) {
         if (entries.stream().map(MappingEntryDto::field).distinct().count() != entries.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Each field can be mapped only once");
         }
 
-        siteMappingRepository.deleteBySiteHost(siteHost);
+        siteMappingRepository.deleteByGroupId(group.getId());
         siteMappingRepository.saveAll(entries.stream()
                 .map(entry -> SiteMapping.builder()
-                        .siteHost(siteHost)
+                        .groupId(group.getId())
                         .fieldName(entry.field())
                         .sourceType(entry.sourceType())
                         .sourceKey(entry.sourceKey().trim())
                         .build())
                 .toList());
-        return new SiteMappingGroupDto(siteHost, entries);
+        return SiteMappingGroupDto.from(group, entries);
     }
 
-    // DELETE /api/site-mappings/{host}
+    private String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text.trim();
+    }
+
+    // DELETE /api/site-mappings/{id}
     @Transactional
-    public void delete(String host) {
-        siteMappingRepository.deleteBySiteHost(HostUtils.normalizeHost(host));
+    public void delete(Long id) {
+        siteMappingRepository.deleteByGroupId(id);
+        mappingGroupRepository.deleteById(id);
     }
 }

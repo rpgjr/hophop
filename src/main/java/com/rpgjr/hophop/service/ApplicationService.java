@@ -62,6 +62,7 @@ public class ApplicationService {
                 .setup(ofNullable(request.setup()).orElse(Setup.Onsite))
                 .remarks(request.remarks())
                 .location(blankToNull(request.location()))
+                .website(blankToNull(request.website()))
                 .description(request.description())
                 .link(request.link().trim())
                 .appliedDate(request.appliedDate())
@@ -111,6 +112,7 @@ public class ApplicationService {
         application.setSetup(ofNullable(request.setup()).orElse(Setup.Onsite));
         application.setRemarks(request.remarks());
         application.setLocation(blankToNull(request.location()));
+        application.setWebsite(blankToNull(request.website()));
         application.setDescription(request.description());
         application.setLink(request.link().trim());
         application.setAppliedDate(request.appliedDate());

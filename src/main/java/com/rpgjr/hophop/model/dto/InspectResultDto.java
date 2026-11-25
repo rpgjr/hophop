@@ -8,7 +8,8 @@ public record InspectResultDto(
 
         List<CandidateDto> candidates,
 
-        List<MappingEntryDto> mappings
+        // every saved mapping for this website, one per country
+        List<SiteMappingGroupDto> groups
 
 ) {
 }
