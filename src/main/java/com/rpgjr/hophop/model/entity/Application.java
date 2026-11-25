@@ -60,6 +60,8 @@ public class Application {
 	@Column(columnDefinition = "TEXT")
 	private String description;
 
+	private String location;
+
 	private String link;
 
 	private LocalDate appliedDate;

@@ -32,6 +32,8 @@ public record CreateApplicationRequestDto(
 
         String remarks,
 
+        @Size(max = 255) String location,
+
         @Size(max = 20000) String description,
 
         @NotBlank String link,
